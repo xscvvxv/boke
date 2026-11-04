@@ -1,0 +1,9 @@
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ if .IsHome }}{{ site.Title }}{{ else }}{{ .Title }} · {{ site.Title }}{{ end }}</title>
+  <meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{ site.Params.description }}{{ end }}">
+  {{ with .OutputFormats.Get "rss" }}<link rel="alternate" href="{{ .Permalink }}" type="application/rss+xml" title="{{ site.Title }}">{{ end }}
+  <link rel="stylesheet" href="{{ "css/style.css" | relURL }}">
+  {{ if not hugo.IsServer }}<link rel="canonical" href="{{ .Permalink }}">{{ end }}
+</head>

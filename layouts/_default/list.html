@@ -1,0 +1,13 @@
+{{ define "main" }}
+  <h1 class="page-title">{{ .Title }}</h1>
+  <ul class="post-list">
+    {{ range .Pages.ByDate.Reverse }}
+      <li class="post-item">
+        <a class="post-link" href="{{ .RelPermalink }}">{{ .Title }}</a>
+        <div class="post-meta"><time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format (site.Params.dateFormat | default "2006-01-02") }}</time></div>
+      </li>
+    {{ else }}
+      <li class="post-item">这里还没有内容。</li>
+    {{ end }}
+  </ul>
+{{ end }}

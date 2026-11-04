@@ -1,0 +1,33 @@
+baseURL: "https://xscvvxv.github.io/boke/"
+languageCode: "zh-cn"
+title: "博客"
+theme: ""
+enableRobotsTXT: true
+enableEmoji: true
+pagination:
+  pagerSize: 10
+params:
+  author: "xscvvxv"
+  description: "记录、思考与折腾"
+  dateFormat: "2006-01-02"
+markup:
+  goldmark:
+    renderer:
+      unsafe: false
+  highlight:
+    style: "github-dark"
+    noClasses: true
+    lineNos: false
+taxonomies:
+  tag: "tags"
+  category: "categories"
+menu:
+  main:
+    - name: "首页"
+      pageRef: "/"
+      weight: 1
+    - name: "标签"
+      pageRef: "/tags"
+      weight: 2
+outputs:
+  home: ["HTML", "RSS"]

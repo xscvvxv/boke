@@ -1,0 +1,18 @@
+{{ define "main" }}
+  <h1 class="page-title">{{ site.Params.description }}</h1>
+  {{ $posts := where site.RegularPages "Section" "posts" }}
+  <ul class="post-list">
+    {{ range $posts.ByDate.Reverse }}
+      <li class="post-item">
+        <a class="post-link" href="{{ .RelPermalink }}">{{ .Title }}</a>
+        <div class="post-meta">
+          <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format (site.Params.dateFormat | default "2006-01-02") }}</time>
+          {{ with .Params.tags }}<span class="tags">{{ range . }}<a href="{{ "/tags/" | relURL }}{{ . | urlize }}">#{{ . }}</a>{{ end }}</span>{{ end }}
+        </div>
+        {{ with .Summary }}<p class="post-summary">{{ . | plainify | truncate 160 }}</p>{{ end }}
+      </li>
+    {{ else }}
+      <li class="post-item">还没有文章，往 <code>content/posts/</code> 里加一篇吧。</li>
+    {{ end }}
+  </ul>
+{{ end }}

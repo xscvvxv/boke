@@ -1,0 +1,10 @@
+{{ define "main" }}
+  <h1 class="page-title">{{ .Title }}</h1>
+  <ul class="term-list">
+    {{ range .Data.Terms.Alphabetical }}
+      <li><a href="{{ .Page.RelPermalink }}">{{ .Page.Title }}</a> <span class="count">{{ .Count }}</span></li>
+    {{ else }}
+      <li>还没有标签。</li>
+    {{ end }}
+  </ul>
+{{ end }}
