@@ -19,7 +19,7 @@ author: "xscvvxv"
 
 源码 docstring 第一句：「Deliberately no second scheduler — a small task graph written into the existing Kanban kernel」。swarm 只做一件事：往既有看板里写一张图。root 卡建完立刻完成；每个 worker 卡的 parent 都是 root，所以彼此并行；verifier 的 parents 是全部 worker，构成 fan-in 屏障；synthesizer 的 parent 只有 verifier，严格串行。拓扑不是 CLI 画出来的，是 `task_links` 里的 parent 边决定的。
 
-命令长这样（本机 `hermes kanban swarm --help` 的签名，`--worker` 可重复）：
+命令长这样（本机 `hermes kanban swarm --help` 的用法，`--worker` 可重复）：
 
 ```bash
 hermes kanban swarm \
@@ -56,13 +56,13 @@ worker 之间共享的东西一件都不在 prompt 里。黑板是 root 卡上 `
 
 失败有四条处理路径，各自配一组常量，账算得不一样。stale 回收要求跑满 4 小时且 1 小时无心跳，回 `ready` 但不计失败——属于缺席检测，锅不算在卡上。claim-TTL 过期的自动回收记 1 次非成功，否则会无限 claim→reclaim 循环。手动 reclaim 清零。连续 2 次非成功就 `gave_up` 自动 block，同因反复 block 到 2 次转 `triage`。所以「reclaim 等于免费重试」只对 stale 和手动 reclaim 成立，把回收当无限重试，第三次会发现卡已经被 block 了。
 
-这不是纸面推演。今天这篇文章就是同一套内核跑的，只不过四张卡串成一条 parent 链，不是上面那张扇出图。时间戳能逐条查：`kanban.db` 的 `task_events` 里，20:04:07 建 root 卡，10 秒后被 claim。第一轮跑了 14 分钟才被人手动 reclaim，回收理由原文是「worker 卡在 computer_use/tool_search，12 分钟无进展」——一次 `tool_search` 走了 420 秒超时才失败，紧接着它又去调 `computer_use`，被审批拦住，剩下的时间都花在跟这篇稿子无关的工具上。20:18:56 改掉卡上的指令（明确禁用无关工具），20:19:04 重跑，20:20:48 `done`，1 分 44 秒。后面三跳：researcher 15 分 57 秒，writer 7 分 35 秒，reviewer 4 分 38 秒。
+这不是纸面推演。今天这篇文章就是同一套内核跑的，只不过四张卡串成一条 parent 链（发布卡接在校对之后），不是上面那张扇出图。时间戳能逐条查：`kanban.db` 的 `task_events` 里，20:04:07 建 root 卡，10 秒后被 claim。第一轮跑了 14 分钟才被人手动 reclaim，回收理由原文是「worker 卡在 computer_use/tool_search，12 分钟无进展……」——一次 `tool_search` 走了 420 秒超时才失败，紧接着它又去调 `computer_use`，被审批拦住，剩下的时间没有任何产出。20:18:56 改掉卡上的指令（明确禁用无关工具），20:19:04 重跑，20:20:48 `done`，1 分 44 秒。后面三跳：researcher 15 分 57 秒，writer 7 分 35 秒，reviewer 4 分 38 秒。
 
 于是可以说准一点：reclaim 是免费重启，不是免费时间。那次回收没给卡记失败，但 14 分钟已经花掉了，没人退得回来。真正把时间省下来的是改指令那一下——把「准用什么工具」写清楚，比多给一次重试有用得多。卡住时该往卡里写什么，答案也就在这里：不是「请继续」，而是「上一轮卡在哪一步、下一步只准做什么、哪些工具别再碰」。另有一笔容易被忽略的开销在相邻两跳之间：root 卡 20:20:48 完成，researcher 20:21:12 才被 claim；writer 那一跳等了 56 秒，reviewer 等了 57 秒。dispatcher 按 tick 扫，每跳都有几十秒排队，三跳加起来两分多钟。这段延迟跟任务难度无关，只跟图上有几跳有关。
 
 成本也是账。token 可加：每个 worker 独立 session，没有窗口共享。墙钟在真并行下取 max。固定开销是 N 次冷启动加 verifier、synthesizer 两跳。
 
-反例不需要编。三个文件、两百行的重构套四个 worker，负收益长这样：单 agent 一次读入、一次编辑、一次跑测试就收工；四个 worker 各自把同样的三个文件读进各自窗口、各自冷启动、各自跑一遍测试才敢 claim 完成，verifier 得把四份 handoff 读全，synthesizer 再把四份改动合成一个两百行的 diff，最后总得有人跑一次全量测试确认合并没有打架。省下的是编辑时间，赔进去的是四份上下文重建、一次合并、一次校验——在两百行这个量级上，后者一定更贵。协调成本吃掉它省下的时间，并行这时是负收益。
+反例不需要编。三个文件、两百行的重构套四个 worker，负收益长这样：单 agent 一次读入、一次编辑、一次跑测试就收工；四个 worker 各自把同样的三个文件读进各自窗口、各自冷启动、各自跑一遍测试才敢 claim 完成，verifier 得把四份 handoff 读全，synthesizer 再把四份改动合成一个两百行的 diff，最后总得有人跑一次全量测试确认合并没有打架。省下的是编辑时间，赔进去的是四份上下文重建、一次合并、一次校验——在两百行这个量级上，协调成本会吃掉省下的时间，并行是负收益。
 
 形状本身也是固定的：swarm v1 就是 1 root 加 N workers 加 1 verifier 加 1 synthesizer，没有动态拓扑。它设计上还是单机的——状态在本地 SQLite，dispatcher 只在本机 spawn，崩溃检测假设 PID 是本机的，跨主机明确不支持。要跨机器编排，这套东西现在不是答案。
 
