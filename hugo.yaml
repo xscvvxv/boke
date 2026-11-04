@@ -1,7 +1,6 @@
 baseURL: "https://xscvvxv.github.io/boke/"
 languageCode: "zh-cn"
 title: "博客"
-theme: ""
 enableRobotsTXT: true
 enableEmoji: true
 pagination:
